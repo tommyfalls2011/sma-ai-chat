@@ -28,18 +28,20 @@ User (Tommy Falls) had a full-featured AI IDE called SMA-AI that was accidentall
 - [x] Claude Opus 4.6 integration via Emergent Universal Key
 - [x] Anthropic API direct key support (user's own key)
 - [x] Ollama model integration (configurable URL)
+- [x] **Open WebUI integration** (OpenAI-compatible API, auto-discovers models)
 - [x] Conversation CRUD (create, list, get, delete, rename)
 - [x] Message persistence in MongoDB (200 msg history)
 - [x] Auto-titling conversations based on first message
 - [x] React frontend with Nixie Dark theme
 - [x] Sidebar with conversation list
-- [x] Model selector dropdown
+- [x] Model selector dropdown (3 providers: Anthropic, Ollama, Open WebUI)
 - [x] Code syntax highlighting (Prism/OneDark theme)
-- [x] Markdown rendering with GFM support
-- [x] Settings modal (API key, Ollama URL, key source toggle)
+- [x] Markdown rendering with GFM support (tables, blockquotes, code)
+- [x] Settings modal with 3 provider sections + key source toggle
 - [x] Grid background engineering aesthetic
 - [x] Responsive design with collapsible sidebar
 - [x] Quick prompts for common tasks (antenna, React, Python, gamma match)
+- [x] Testing: 100% backend, 100% frontend pass rate
 
 ## User's GitHub Ecosystem
 1. **sma2026-1** (2,662 commits) — Main Antenna Builder & Analyzer (FastAPI + React Native/Expo)
