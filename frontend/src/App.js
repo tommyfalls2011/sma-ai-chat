@@ -8,7 +8,7 @@ import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import {
   MessageSquarePlus, Send, Settings, Trash2, ChevronDown,
   Copy, Check, Loader2, Radio, Cpu, Zap, Menu, X,
-  AlertCircle
+  AlertCircle, Globe
 } from "lucide-react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -87,6 +87,7 @@ const ModelSelector = ({ models, selected, onChange }) => {
   const getIcon = (provider) => {
     if (provider === "anthropic") return <Zap size={14} className="text-primary" />;
     if (provider === "ollama") return <Cpu size={14} className="text-secondary" />;
+    if (provider === "openwebui") return <Globe size={14} className="text-blue-400" />;
     return <Radio size={14} className="text-accent" />;
   };
 
@@ -129,6 +130,8 @@ const SettingsModal = ({ open, onClose }) => {
   const [settings, setSettings] = useState({});
   const [apiKey, setApiKey] = useState("");
   const [ollamaUrl, setOllamaUrl] = useState("");
+  const [owuiUrl, setOwuiUrl] = useState("");
+  const [owuiKey, setOwuiKey] = useState("");
   const [useEmergent, setUseEmergent] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -138,6 +141,7 @@ const SettingsModal = ({ open, onClose }) => {
       axios.get(`${API}/settings`).then((r) => {
         setSettings(r.data);
         setOllamaUrl(r.data.ollama_base_url || "");
+        setOwuiUrl(r.data.openwebui_base_url || "");
         setUseEmergent(r.data.use_emergent_key !== false);
       });
     }
@@ -145,8 +149,9 @@ const SettingsModal = ({ open, onClose }) => {
 
   const handleSave = async () => {
     setSaving(true);
-    const update = { ollama_base_url: ollamaUrl, use_emergent_key: useEmergent };
+    const update = { ollama_base_url: ollamaUrl, openwebui_base_url: owuiUrl, use_emergent_key: useEmergent };
     if (apiKey) update.anthropic_api_key = apiKey;
+    if (owuiKey) update.openwebui_api_key = owuiKey;
     await axios.put(`${API}/settings`, update);
     setSaving(false);
     setSaved(true);
@@ -157,7 +162,7 @@ const SettingsModal = ({ open, onClose }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" data-testid="settings-modal">
-      <div className="bg-surface border border-border rounded-lg w-full max-w-lg p-6 shadow-2xl">
+      <div className="bg-surface border border-border rounded-lg w-full max-w-lg p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-lg font-semibold font-mono text-zinc-100">Settings</h2>
           <button onClick={onClose} data-testid="settings-close-btn" className="p-1 hover:bg-surface-hl rounded transition-colors">
@@ -169,7 +174,10 @@ const SettingsModal = ({ open, onClose }) => {
           {/* Key Source Toggle */}
           <div className="bg-background border border-border rounded-md p-4">
             <div className="flex items-center justify-between mb-2">
-              <label className="text-sm font-medium text-zinc-300">API Key Source</label>
+              <div className="flex items-center gap-2">
+                <Zap size={16} className="text-primary" />
+                <label className="text-sm font-medium text-zinc-300">Claude API Source</label>
+              </div>
               <button
                 onClick={() => setUseEmergent(!useEmergent)}
                 data-testid="toggle-key-source"
@@ -180,8 +188,8 @@ const SettingsModal = ({ open, onClose }) => {
             </div>
             <p className="text-xs text-muted">
               {useEmergent
-                ? "Using Emergent Universal Key (credits from your Emergent balance)"
-                : "Using your own Anthropic API key"}
+                ? "Using Emergent Universal Key (ready to go)"
+                : "Using your own Anthropic API key (needs credits)"}
             </p>
           </div>
 
@@ -200,8 +208,12 @@ const SettingsModal = ({ open, onClose }) => {
             </div>
           )}
 
-          <div>
-            <label className="block text-sm font-medium text-zinc-300 mb-1.5">Ollama Server URL</label>
+          {/* Ollama Section */}
+          <div className="bg-background border border-border rounded-md p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Cpu size={16} className="text-secondary" />
+              <label className="text-sm font-medium text-zinc-300">Ollama (Direct)</label>
+            </div>
             <input
               type="text"
               value={ollamaUrl}
@@ -210,7 +222,34 @@ const SettingsModal = ({ open, onClose }) => {
               data-testid="settings-ollama-url-input"
               className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm font-mono text-zinc-200 placeholder:text-muted/50 focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/20"
             />
-            <div className="text-xs text-muted mt-1">Your local Ollama server (e.g., sma-ai machine)</div>
+            <div className="text-xs text-muted mt-1">Direct Ollama API (your sma-ai machine)</div>
+          </div>
+
+          {/* Open WebUI Section */}
+          <div className="bg-background border border-border rounded-md p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Globe size={16} className="text-blue-400" />
+              <label className="text-sm font-medium text-zinc-300">Open WebUI</label>
+            </div>
+            <input
+              type="text"
+              value={owuiUrl}
+              onChange={(e) => setOwuiUrl(e.target.value)}
+              placeholder="http://sma-ai.ddns.net:3000"
+              data-testid="settings-owui-url-input"
+              className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm font-mono text-zinc-200 placeholder:text-muted/50 focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/20 mb-2"
+            />
+            <input
+              type="password"
+              value={owuiKey}
+              onChange={(e) => setOwuiKey(e.target.value)}
+              placeholder="Bearer token / API key"
+              data-testid="settings-owui-key-input"
+              className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm font-mono text-zinc-200 placeholder:text-muted/50 focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/20"
+            />
+            <div className="text-xs text-muted mt-1">
+              Current: {settings.openwebui_api_key_masked || "Not set"}
+            </div>
           </div>
 
           <button

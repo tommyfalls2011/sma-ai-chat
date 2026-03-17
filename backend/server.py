@@ -45,6 +45,8 @@ class MessageCreate(BaseModel):
 class SettingsUpdate(BaseModel):
     anthropic_api_key: Optional[str] = None
     ollama_base_url: Optional[str] = None
+    openwebui_base_url: Optional[str] = None
+    openwebui_api_key: Optional[str] = None
     default_model: Optional[str] = None
     use_emergent_key: Optional[bool] = None
 
@@ -61,6 +63,8 @@ async def get_settings():
             "anthropic_api_key": os.environ.get("ANTHROPIC_API_KEY", ""),
             "emergent_llm_key": os.environ.get("EMERGENT_LLM_KEY", ""),
             "ollama_base_url": os.environ.get("OLLAMA_BASE_URL", ""),
+            "openwebui_base_url": os.environ.get("OPENWEBUI_BASE_URL", ""),
+            "openwebui_api_key": os.environ.get("OPENWEBUI_API_KEY", ""),
             "default_model": os.environ.get("DEFAULT_MODEL", "claude-opus-4-6"),
             "use_emergent_key": True,
         }
@@ -157,8 +161,15 @@ async def send_message(data: MessageCreate):
         )
 
     is_ollama = model.startswith("ollama:")
+    is_openwebui = model.startswith("owui:")
     
-    if is_ollama:
+    if is_openwebui:
+        return StreamingResponse(
+            stream_openwebui(data.conversation_id, model, messages_for_api, settings),
+            media_type="text/event-stream",
+            headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
+        )
+    elif is_ollama:
         return StreamingResponse(
             stream_ollama(data.conversation_id, model, messages_for_api, settings),
             media_type="text/event-stream",
@@ -320,6 +331,85 @@ async def stream_ollama(conversation_id, model, messages, settings):
         logger.error(f"Ollama streaming error: {e}")
         yield f"data: {json.dumps({'type': 'error', 'content': str(e)})}\n\n"
 
+# --- Open WebUI Streaming (OpenAI-compatible API) ---
+
+async def stream_openwebui(conversation_id, model, messages, settings):
+    owui_url = settings.get("openwebui_base_url", "")
+    owui_key = settings.get("openwebui_api_key", "")
+    
+    if not owui_url:
+        yield f"data: {json.dumps({'type': 'error', 'content': 'Open WebUI URL not configured. Go to Settings.'})}\n\n"
+        return
+
+    owui_model = model.replace("owui:", "")
+    msg_id = str(uuid.uuid4())
+    full_response = ""
+
+    system_msg = {"role": "system", "content": "You are SMA-AI, an expert coding assistant specialized in antenna design, radio engineering, React, Python, and full-stack development. Use markdown formatting with code blocks."}
+
+    try:
+        yield f"data: {json.dumps({'type': 'start', 'message_id': msg_id})}\n\n"
+
+        headers = {"Content-Type": "application/json"}
+        if owui_key:
+            headers["Authorization"] = f"Bearer {owui_key}"
+
+        async with httpx.AsyncClient(timeout=120.0) as http_client:
+            async with http_client.stream(
+                "POST",
+                f"{owui_url.rstrip('/')}/api/chat/completions",
+                headers=headers,
+                json={
+                    "model": owui_model,
+                    "messages": [system_msg] + messages,
+                    "stream": True,
+                },
+            ) as response:
+                if response.status_code != 200:
+                    body = await response.aread()
+                    yield f"data: {json.dumps({'type': 'error', 'content': f'Open WebUI error {response.status_code}: {body.decode()[:200]}'})}\n\n"
+                    return
+
+                async for line in response.aiter_lines():
+                    line = line.strip()
+                    if not line or not line.startswith("data: "):
+                        continue
+                    data_str = line[6:]
+                    if data_str == "[DONE]":
+                        break
+                    try:
+                        chunk = json.loads(data_str)
+                        choices = chunk.get("choices", [])
+                        if choices:
+                            delta = choices[0].get("delta", {})
+                            text = delta.get("content", "")
+                            if text:
+                                full_response += text
+                                yield f"data: {json.dumps({'type': 'delta', 'content': text})}\n\n"
+                    except json.JSONDecodeError:
+                        continue
+
+        assistant_msg = {
+            "id": msg_id,
+            "conversation_id": conversation_id,
+            "role": "assistant",
+            "content": full_response,
+            "model": model,
+            "created_at": now_iso(),
+        }
+        await db.messages.insert_one(assistant_msg)
+        await db.conversations.update_one(
+            {"id": conversation_id},
+            {"$set": {"updated_at": now_iso()}, "$inc": {"message_count": 2}}
+        )
+        yield f"data: {json.dumps({'type': 'done', 'message_id': msg_id})}\n\n"
+
+    except httpx.ConnectError:
+        yield f"data: {json.dumps({'type': 'error', 'content': f'Cannot connect to Open WebUI at {owui_url}. Is it running?'})}\n\n"
+    except Exception as e:
+        logger.error(f"Open WebUI streaming error: {e}")
+        yield f"data: {json.dumps({'type': 'error', 'content': str(e)})}\n\n"
+
 # --- Models ---
 
 @api_router.get("/models")
@@ -330,6 +420,7 @@ async def list_models():
         {"id": "claude-sonnet-4-6", "name": "Claude Sonnet 4.6", "provider": "anthropic", "description": "Fast & capable"},
     ]
 
+    # Fetch Ollama models
     ollama_url = settings.get("ollama_base_url", "")
     if ollama_url:
         try:
@@ -347,6 +438,32 @@ async def list_models():
         except Exception as e:
             logger.warning(f"Could not fetch Ollama models: {e}")
 
+    # Fetch Open WebUI models
+    owui_url = settings.get("openwebui_base_url", "")
+    owui_key = settings.get("openwebui_api_key", "")
+    if owui_url:
+        try:
+            headers = {}
+            if owui_key:
+                headers["Authorization"] = f"Bearer {owui_key}"
+            async with httpx.AsyncClient(timeout=5.0) as http_client:
+                resp = await http_client.get(f"{owui_url.rstrip('/')}/api/models", headers=headers)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    model_list = data.get("data", data) if isinstance(data, dict) else data
+                    if isinstance(model_list, list):
+                        for m in model_list:
+                            model_id = m.get("id", m.get("name", ""))
+                            if model_id:
+                                models.append({
+                                    "id": f"owui:{model_id}",
+                                    "name": model_id,
+                                    "provider": "openwebui",
+                                    "description": f"Open WebUI - {m.get('owned_by', 'local')}",
+                                })
+        except Exception as e:
+            logger.warning(f"Could not fetch Open WebUI models: {e}")
+
     return models
 
 # --- Settings ---
@@ -360,8 +477,14 @@ async def get_settings_endpoint():
         settings["anthropic_api_key_masked"] = key[:12] + "..." + key[-6:]
     else:
         settings["anthropic_api_key_masked"] = "Not set"
+    owui_key = settings.get("openwebui_api_key", "")
+    if owui_key and len(owui_key) > 20:
+        settings["openwebui_api_key_masked"] = owui_key[:12] + "..." + owui_key[-6:]
+    else:
+        settings["openwebui_api_key_masked"] = "Not set" if not owui_key else owui_key
     settings.pop("anthropic_api_key", None)
     settings.pop("emergent_llm_key", None)
+    settings.pop("openwebui_api_key", None)
     return settings
 
 @api_router.put("/settings")
@@ -371,6 +494,10 @@ async def update_settings(data: SettingsUpdate):
         update["anthropic_api_key"] = data.anthropic_api_key
     if data.ollama_base_url is not None:
         update["ollama_base_url"] = data.ollama_base_url
+    if data.openwebui_base_url is not None:
+        update["openwebui_base_url"] = data.openwebui_base_url
+    if data.openwebui_api_key is not None:
+        update["openwebui_api_key"] = data.openwebui_api_key
     if data.default_model is not None:
         update["default_model"] = data.default_model
     if data.use_emergent_key is not None:
@@ -390,6 +517,7 @@ async def update_settings(data: SettingsUpdate):
         settings["anthropic_api_key_masked"] = key[:12] + "..." + key[-6:]
     settings.pop("anthropic_api_key", None)
     settings.pop("emergent_llm_key", None)
+    settings.pop("openwebui_api_key", None)
     return settings
 
 # --- Health ---

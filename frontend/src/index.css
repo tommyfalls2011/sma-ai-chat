@@ -149,3 +149,8 @@ html, body, #root {
 textarea {
   field-sizing: content;
 }
+
+/* Force dark inputs */
+input, textarea {
+  color-scheme: dark;
+}
