@@ -13,6 +13,7 @@ from typing import List, Optional
 import uuid
 from datetime import datetime, timezone
 import anthropic
+from emergentintegrations.llm.chat import LlmChat, UserMessage
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -45,6 +46,7 @@ class SettingsUpdate(BaseModel):
     anthropic_api_key: Optional[str] = None
     ollama_base_url: Optional[str] = None
     default_model: Optional[str] = None
+    use_emergent_key: Optional[bool] = None
 
 # --- Helper Functions ---
 
@@ -57,8 +59,10 @@ async def get_settings():
         settings = {
             "type": "app_settings",
             "anthropic_api_key": os.environ.get("ANTHROPIC_API_KEY", ""),
+            "emergent_llm_key": os.environ.get("EMERGENT_LLM_KEY", ""),
             "ollama_base_url": os.environ.get("OLLAMA_BASE_URL", ""),
             "default_model": os.environ.get("DEFAULT_MODEL", "claude-opus-4-6"),
+            "use_emergent_key": True,
         }
         await db.settings.insert_one(settings)
         settings.pop("_id", None)
@@ -168,9 +172,57 @@ async def send_message(data: MessageCreate):
         )
 
 async def stream_anthropic(conversation_id, model, messages, settings):
-    api_key = settings.get("anthropic_api_key", "")
+    # Try Emergent LLM key first (universal key), fallback to direct Anthropic key
+    use_emergent = settings.get("use_emergent_key", True)
+    emergent_key = settings.get("emergent_llm_key", os.environ.get("EMERGENT_LLM_KEY", ""))
+    anthropic_key = settings.get("anthropic_api_key", "")
+
+    if use_emergent and emergent_key:
+        # Use emergentintegrations library
+        try:
+            msg_id = str(uuid.uuid4())
+            yield f"data: {json.dumps({'type': 'start', 'message_id': msg_id})}\n\n"
+
+            session_id = f"sma-ai-{conversation_id}"
+            chat = LlmChat(
+                api_key=emergent_key,
+                session_id=session_id,
+                system_message="You are SMA-AI, an expert coding assistant specialized in antenna design, radio engineering, React, Python, and full-stack development. You provide clear, accurate code with explanations. Use markdown formatting with code blocks."
+            )
+            chat.with_model("anthropic", model)
+
+            # Build the last user message
+            last_user_msg = messages[-1]["content"] if messages else ""
+            user_message = UserMessage(text=last_user_msg)
+            
+            full_response = await chat.send_message(user_message)
+
+            yield f"data: {json.dumps({'type': 'delta', 'content': full_response})}\n\n"
+
+            assistant_msg = {
+                "id": msg_id,
+                "conversation_id": conversation_id,
+                "role": "assistant",
+                "content": full_response,
+                "model": model,
+                "created_at": now_iso(),
+            }
+            await db.messages.insert_one(assistant_msg)
+            await db.conversations.update_one(
+                {"id": conversation_id},
+                {"$set": {"updated_at": now_iso()}, "$inc": {"message_count": 2}}
+            )
+            yield f"data: {json.dumps({'type': 'done', 'message_id': msg_id})}\n\n"
+            return
+
+        except Exception as e:
+            logger.warning(f"Emergent key failed, falling back to direct Anthropic: {e}")
+            # Fall through to direct Anthropic API
+
+    # Direct Anthropic API (streaming)
+    api_key = anthropic_key
     if not api_key:
-        yield f"data: {json.dumps({'type': 'error', 'content': 'Anthropic API key not set'})}\n\n"
+        yield f"data: {json.dumps({'type': 'error', 'content': 'No API key configured. Go to Settings.'})}\n\n"
         return
 
     try:
@@ -190,7 +242,6 @@ async def stream_anthropic(conversation_id, model, messages, settings):
                 full_response += text
                 yield f"data: {json.dumps({'type': 'delta', 'content': text})}\n\n"
 
-        # Save assistant message
         assistant_msg = {
             "id": msg_id,
             "conversation_id": conversation_id,
@@ -200,12 +251,10 @@ async def stream_anthropic(conversation_id, model, messages, settings):
             "created_at": now_iso(),
         }
         await db.messages.insert_one(assistant_msg)
-
         await db.conversations.update_one(
             {"id": conversation_id},
             {"$set": {"updated_at": now_iso()}, "$inc": {"message_count": 2}}
         )
-
         yield f"data: {json.dumps({'type': 'done', 'message_id': msg_id})}\n\n"
 
     except anthropic.AuthenticationError:
@@ -306,13 +355,13 @@ async def list_models():
 async def get_settings_endpoint():
     settings = await get_settings()
     settings.pop("type", None)
-    # Mask the API key for display
     key = settings.get("anthropic_api_key", "")
     if key and len(key) > 20:
         settings["anthropic_api_key_masked"] = key[:12] + "..." + key[-6:]
     else:
         settings["anthropic_api_key_masked"] = "Not set"
     settings.pop("anthropic_api_key", None)
+    settings.pop("emergent_llm_key", None)
     return settings
 
 @api_router.put("/settings")
@@ -324,6 +373,8 @@ async def update_settings(data: SettingsUpdate):
         update["ollama_base_url"] = data.ollama_base_url
     if data.default_model is not None:
         update["default_model"] = data.default_model
+    if data.use_emergent_key is not None:
+        update["use_emergent_key"] = data.use_emergent_key
 
     if update:
         await db.settings.update_one(
@@ -338,6 +389,7 @@ async def update_settings(data: SettingsUpdate):
     if key and len(key) > 20:
         settings["anthropic_api_key_masked"] = key[:12] + "..." + key[-6:]
     settings.pop("anthropic_api_key", None)
+    settings.pop("emergent_llm_key", None)
     return settings
 
 # --- Health ---

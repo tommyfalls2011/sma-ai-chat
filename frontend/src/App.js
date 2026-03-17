@@ -129,6 +129,7 @@ const SettingsModal = ({ open, onClose }) => {
   const [settings, setSettings] = useState({});
   const [apiKey, setApiKey] = useState("");
   const [ollamaUrl, setOllamaUrl] = useState("");
+  const [useEmergent, setUseEmergent] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -137,13 +138,14 @@ const SettingsModal = ({ open, onClose }) => {
       axios.get(`${API}/settings`).then((r) => {
         setSettings(r.data);
         setOllamaUrl(r.data.ollama_base_url || "");
+        setUseEmergent(r.data.use_emergent_key !== false);
       });
     }
   }, [open]);
 
   const handleSave = async () => {
     setSaving(true);
-    const update = { ollama_base_url: ollamaUrl };
+    const update = { ollama_base_url: ollamaUrl, use_emergent_key: useEmergent };
     if (apiKey) update.anthropic_api_key = apiKey;
     await axios.put(`${API}/settings`, update);
     setSaving(false);
@@ -164,18 +166,39 @@ const SettingsModal = ({ open, onClose }) => {
         </div>
 
         <div className="space-y-5">
-          <div>
-            <label className="block text-sm font-medium text-zinc-300 mb-1.5">Anthropic API Key</label>
-            <div className="text-xs text-muted mb-2">Current: {settings.anthropic_api_key_masked || "Not set"}</div>
-            <input
-              type="password"
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              placeholder="sk-ant-api03-..."
-              data-testid="settings-api-key-input"
-              className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm font-mono text-zinc-200 placeholder:text-muted/50 focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/20"
-            />
+          {/* Key Source Toggle */}
+          <div className="bg-background border border-border rounded-md p-4">
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-sm font-medium text-zinc-300">API Key Source</label>
+              <button
+                onClick={() => setUseEmergent(!useEmergent)}
+                data-testid="toggle-key-source"
+                className={`relative w-11 h-6 rounded-full transition-colors ${useEmergent ? "bg-secondary" : "bg-zinc-700"}`}
+              >
+                <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-transform ${useEmergent ? "left-[22px]" : "left-0.5"}`} />
+              </button>
+            </div>
+            <p className="text-xs text-muted">
+              {useEmergent
+                ? "Using Emergent Universal Key (credits from your Emergent balance)"
+                : "Using your own Anthropic API key"}
+            </p>
           </div>
+
+          {!useEmergent && (
+            <div>
+              <label className="block text-sm font-medium text-zinc-300 mb-1.5">Anthropic API Key</label>
+              <div className="text-xs text-muted mb-2">Current: {settings.anthropic_api_key_masked || "Not set"}</div>
+              <input
+                type="password"
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                placeholder="sk-ant-api03-..."
+                data-testid="settings-api-key-input"
+                className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm font-mono text-zinc-200 placeholder:text-muted/50 focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/20"
+              />
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-zinc-300 mb-1.5">Ollama Server URL</label>
@@ -187,7 +210,7 @@ const SettingsModal = ({ open, onClose }) => {
               data-testid="settings-ollama-url-input"
               className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm font-mono text-zinc-200 placeholder:text-muted/50 focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/20"
             />
-            <div className="text-xs text-muted mt-1">Leave empty if not using Ollama</div>
+            <div className="text-xs text-muted mt-1">Your local Ollama server (e.g., sma-ai machine)</div>
           </div>
 
           <button
@@ -398,11 +421,11 @@ function App() {
 
         <div className="flex-1 overflow-y-auto p-2 space-y-0.5" data-testid="conversation-list">
           {conversations.map((conv) => (
-            <button
+            <div
               key={conv.id}
               onClick={() => setActiveConv(conv.id)}
               data-testid={`conversation-${conv.id}`}
-              className={`w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm text-left transition-colors group ${
+              className={`w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm text-left transition-colors group cursor-pointer ${
                 activeConv === conv.id ? "bg-surface-hl text-zinc-100" : "text-muted hover:bg-surface-hl hover:text-zinc-300"
               }`}
             >
@@ -415,7 +438,7 @@ function App() {
               >
                 <Trash2 size={12} />
               </button>
-            </button>
+            </div>
           ))}
           {conversations.length === 0 && (
             <div className="text-center text-muted text-xs py-8 font-mono">No conversations yet</div>
