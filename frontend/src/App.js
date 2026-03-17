@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import ReactDOM from "react-dom";
 import "@/App.css";
 import axios from "axios";
 import ReactMarkdown from "react-markdown";
@@ -75,18 +76,23 @@ const MarkdownContent = ({ content }) => (
 // --- Model Selector ---
 const ModelSelector = ({ models, selected, onChange }) => {
   const [open, setOpen] = useState(false);
-  const ref = useRef(null);
+  const btnRef = useRef(null);
+  const dropRef = useRef(null);
   const [pos, setPos] = useState({ top: 0, left: 0 });
 
   useEffect(() => {
-    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    const handler = (e) => {
+      if (btnRef.current && !btnRef.current.contains(e.target) && dropRef.current && !dropRef.current.contains(e.target)) {
+        setOpen(false);
+      }
+    };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
   const handleOpen = () => {
-    if (ref.current) {
-      const rect = ref.current.getBoundingClientRect();
+    if (btnRef.current) {
+      const rect = btnRef.current.getBoundingClientRect();
       setPos({ top: rect.bottom + 4, left: rect.left });
     }
     setOpen(!open);
@@ -101,8 +107,9 @@ const ModelSelector = ({ models, selected, onChange }) => {
   };
 
   return (
-    <div ref={ref} className="relative" data-testid="model-selector">
+    <>
       <button
+        ref={btnRef}
         onClick={handleOpen}
         data-testid="model-selector-trigger"
         className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-surface-hl border border-border hover:border-primary/50 transition-colors text-sm font-mono"
@@ -111,10 +118,12 @@ const ModelSelector = ({ models, selected, onChange }) => {
         <span className="text-zinc-300 truncate max-w-[180px]">{current?.name || "Select Model"}</span>
         <ChevronDown size={14} className="text-muted" />
       </button>
-      {open && (
+      {open && ReactDOM.createPortal(
         <div
-          className="fixed w-72 bg-surface border border-border rounded-md shadow-xl py-1 max-h-80 overflow-y-auto"
-          style={{ top: pos.top, left: pos.left, zIndex: 9999 }}
+          ref={dropRef}
+          data-testid="model-selector"
+          className="w-72 bg-surface border border-border rounded-md shadow-2xl py-1 max-h-80 overflow-y-auto"
+          style={{ position: "fixed", top: pos.top, left: pos.left, zIndex: 99999 }}
         >
           {models.map((m) => (
             <button
@@ -131,9 +140,10 @@ const ModelSelector = ({ models, selected, onChange }) => {
               {m.id === selected && <Check size={14} className="text-primary" />}
             </button>
           ))}
-        </div>
+        </div>,
+        document.body
       )}
-    </div>
+    </>
   );
 };
 
