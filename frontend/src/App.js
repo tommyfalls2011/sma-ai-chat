@@ -76,12 +76,21 @@ const MarkdownContent = ({ content }) => (
 const ModelSelector = ({ models, selected, onChange }) => {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
+  const [pos, setPos] = useState({ top: 0, left: 0 });
 
   useEffect(() => {
     const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
+
+  const handleOpen = () => {
+    if (ref.current) {
+      const rect = ref.current.getBoundingClientRect();
+      setPos({ top: rect.bottom + 4, left: rect.left });
+    }
+    setOpen(!open);
+  };
 
   const current = models.find((m) => m.id === selected) || models[0];
   const getIcon = (provider) => {
@@ -92,9 +101,9 @@ const ModelSelector = ({ models, selected, onChange }) => {
   };
 
   return (
-    <div ref={ref} className="relative z-50" data-testid="model-selector">
+    <div ref={ref} className="relative" data-testid="model-selector">
       <button
-        onClick={() => setOpen(!open)}
+        onClick={handleOpen}
         data-testid="model-selector-trigger"
         className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-surface-hl border border-border hover:border-primary/50 transition-colors text-sm font-mono"
       >
@@ -103,7 +112,10 @@ const ModelSelector = ({ models, selected, onChange }) => {
         <ChevronDown size={14} className="text-muted" />
       </button>
       {open && (
-        <div className="absolute top-full left-0 mt-1 w-72 bg-surface border border-border rounded-md shadow-xl z-50 py-1 max-h-80 overflow-y-auto">
+        <div
+          className="fixed w-72 bg-surface border border-border rounded-md shadow-xl py-1 max-h-80 overflow-y-auto"
+          style={{ top: pos.top, left: pos.left, zIndex: 9999 }}
+        >
           {models.map((m) => (
             <button
               key={m.id}
