@@ -92,7 +92,7 @@ const ModelSelector = ({ models, selected, onChange }) => {
   };
 
   return (
-    <div ref={ref} className="relative" data-testid="model-selector">
+    <div ref={ref} className="relative z-50" data-testid="model-selector">
       <button
         onClick={() => setOpen(!open)}
         data-testid="model-selector-trigger"
@@ -499,7 +499,7 @@ function App() {
       {/* Main Chat Area */}
       <main className={`flex-1 flex flex-col h-screen ${sidebarOpen ? "ml-64" : "ml-0"} transition-all duration-200`} data-testid="chat-area">
         {/* Top Bar */}
-        <header className="flex items-center justify-between px-4 py-3 border-b border-border bg-surface/80 backdrop-blur flex-shrink-0" data-testid="chat-header">
+        <header className="flex items-center justify-between px-4 py-3 border-b border-border bg-surface/80 backdrop-blur flex-shrink-0 relative z-30" data-testid="chat-header">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
