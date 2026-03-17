@@ -1,0 +1,166 @@
+{
+  "design_system": {
+    "identity": {
+      "name": "SMA-AI Dev Workspace",
+      "aesthetic": "Nixie Dark / Technical Realism",
+      "core_values": [
+        "Precision",
+        "Low Latency",
+        "Data Density",
+        "Engineer-First"
+      ],
+      "tone": "Professional, Industrial, High-Contrast"
+    },
+    "typography": {
+      "font_family": {
+        "primary": "Inter, sans-serif",
+        "mono": "JetBrains Mono, monospace",
+        "display": "JetBrains Mono, monospace"
+      },
+      "scale": {
+        "h1": "text-3xl font-bold tracking-tight",
+        "h2": "text-2xl font-semibold tracking-tight",
+        "h3": "text-xl font-semibold",
+        "body": "text-sm leading-7",
+        "mono_sm": "text-xs font-mono",
+        "mono_base": "text-sm font-mono"
+      }
+    },
+    "colors": {
+      "palette": {
+        "background": "#050505",
+        "surface": "#0a0a0a",
+        "surface_highlight": "#18181b",
+        "border": "#27272a",
+        "primary": "#ea580c",
+        "primary_foreground": "#ffffff",
+        "secondary": "#10b981",
+        "secondary_foreground": "#ffffff",
+        "accent": "#f59e0b",
+        "muted": "#71717a",
+        "destructive": "#ef4444"
+      },
+      "usage": {
+        "primary": "Main actions, 'Active' states, Focus rings",
+        "secondary": "Success states, 'Signal' indicators, Online status",
+        "accent": "Warnings, 'Filament' glow effects",
+        "background": "App background (Deep Void)",
+        "surface": "Sidebar, Cards, Modals"
+      },
+      "gradients": {
+        "glow": "radial-gradient(circle at center, rgba(245, 158, 11, 0.15) 0%, transparent 70%)",
+        "scanline": "linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0.2))"
+      }
+    },
+    "spacing": {
+      "container_padding": "p-6 md:p-8",
+      "section_gap": "gap-6",
+      "item_gap": "gap-3"
+    },
+    "borders": {
+      "radius": {
+        "sm": "rounded-sm",
+        "md": "rounded",
+        "lg": "rounded-md",
+        "full": "rounded-full"
+      },
+      "width": "border",
+      "color": "border-zinc-800"
+    },
+    "shadows": {
+      "soft": "shadow-sm",
+      "glow": "0 0 10px rgba(245, 158, 11, 0.2)",
+      "float": "0 10px 30px -10px rgba(0, 0, 0, 0.5)"
+    }
+  },
+  "components": {
+    "buttons": {
+      "primary": "bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-4 py-2 rounded-md font-medium transition-colors text-sm shadow-[0_0_10px_rgba(234,88,12,0.3)]",
+      "secondary": "bg-secondary text-secondary-foreground hover:bg-secondary/80 h-9 px-4 py-2 rounded-md font-medium transition-colors text-sm",
+      "ghost": "hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2 rounded-md transition-colors text-sm",
+      "outline": "border border-input bg-transparent hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2 rounded-md transition-colors text-sm"
+    },
+    "inputs": {
+      "default": "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
+      "chat": "bg-zinc-900/50 border-zinc-800 focus:border-primary/50 focus:ring-1 focus:ring-primary/20 backdrop-blur-sm min-h-[60px] resize-none"
+    },
+    "cards": {
+      "base": "rounded-lg border bg-card text-card-foreground shadow-sm",
+      "interactive": "rounded-lg border bg-card text-card-foreground shadow-sm hover:border-primary/50 transition-colors cursor-pointer"
+    },
+    "sidebar": {
+      "container": "w-64 border-r bg-surface/95 backdrop-blur supports-[backdrop-filter]:bg-surface/60 flex flex-col h-screen fixed left-0 top-0 z-40",
+      "item": "flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md hover:bg-accent/50 hover:text-accent-foreground transition-colors group text-muted-foreground",
+      "item_active": "bg-accent/10 text-accent-foreground"
+    },
+    "chat": {
+      "container": "flex-1 flex flex-col h-screen ml-64 bg-background relative",
+      "message_list": "flex-1 overflow-y-auto p-4 space-y-6",
+      "bubble_user": "bg-zinc-800 text-zinc-100 rounded-2xl rounded-tr-sm px-4 py-3 max-w-[80%] self-end shadow-sm",
+      "bubble_ai": "bg-transparent border border-zinc-800 text-zinc-300 rounded-2xl rounded-tl-sm px-4 py-3 max-w-[80%] self-start font-mono text-sm leading-relaxed",
+      "input_area": "p-4 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky bottom-0 z-10"
+    }
+  },
+  "visual_enhancers": {
+    "grid_background": "bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]",
+    "noise_texture": "before:fixed before:inset-0 before:z-[-1] before:opacity-[0.03] before:bg-[url('https://grainy-gradients.vercel.app/noise.svg')]",
+    "terminal_glow": "text-shadow: 0 0 5px rgba(245, 158, 11, 0.5)"
+  },
+  "layout_strategy": {
+    "type": "sidebar_layout",
+    "structure": [
+      {
+        "area": "sidebar",
+        "width": "w-64",
+        "behavior": "fixed"
+      },
+      {
+        "area": "main",
+        "width": "flex-1",
+        "margin": "ml-64"
+      },
+      {
+        "area": "settings_modal",
+        "behavior": "overlay"
+      }
+    ]
+  },
+  "image_urls": {
+    "backgrounds": [
+      {
+        "url": "https://images.unsplash.com/photo-1767549707419-ceef47ff370d?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjY2NzN8MHwxfHNlYXJjaHwxfHxjaXJjdWl0JTIwYm9hcmQlMjBtYWNybyUyMGRhcmt8ZW58MHx8fHwxNzczNzEzMzA5fDA&ixlib=rb-4.1.0&q=85",
+        "description": "Nixie tube glow texture for empty state or welcome screen background",
+        "category": "texture"
+      }
+    ],
+    "logos": [],
+    "icons": []
+  },
+  "libraries": {
+    "icons": "lucide-react",
+    "syntax_highlighting": "react-syntax-highlighter (Dracula or Atom One Dark theme)",
+    "markdown": "react-markdown remark-gfm",
+    "motion": "framer-motion",
+    "toast": "sonner",
+    "ui": "shadcn/ui (radix-ui primitives)"
+  },
+  "instructions_to_main_agent": [
+    "1. SETUP: Install 'lucide-react', 'framer-motion', 'react-markdown', 'remark-gfm', 'react-syntax-highlighter', 'clsx', 'tailwind-merge', 'sonner'.",
+    "2. THEME: Implement the 'Nixie Dark' theme in tailwind.config.js using the hex codes provided.",
+    "3. FONT: Import 'JetBrains Mono' from Google Fonts in index.css.",
+    "4. LAYOUT: Create a SidebarLayout component that wraps the main content. The sidebar should be fixed.",
+    "5. CHAT: The chat interface is the core. It must be blazing fast. Use 'react-markdown' for AI responses with a custom code block renderer that uses 'react-syntax-highlighter'.",
+    "6. SETTINGS: Create a SettingsDialog using Radix UI Dialog primitive (or Shadcn Dialog). It should handle API keys securely.",
+    "7. AESTHETIC: Apply the 'grid_background' class to the main chat area to give it that engineering graph paper feel.",
+    "8. DARK MODE: Default to dark mode. Add a toggle in the sidebar, but optimize for dark first.",
+    "9. CRITICAL: Ensure the input box supports multi-line text (textarea) but handles 'Enter' to send (Shift+Enter for new line).",
+    "10. DATA-TESTID: Add data-testid to all interactive elements (buttons, inputs, model-selector)."
+  ],
+  "universal_guidelines": [
+    "Do not use gradients for backgrounds, use solid colors or subtle patterns.",
+    "Avoid centering text unless it's a headline. Left-align for readability.",
+    "Use 'sonner' for notifications.",
+    "Ensure all buttons have active/hover states.",
+    "Code blocks must have a 'Copy' button."
+  ]
+}
