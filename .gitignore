@@ -89,3 +89,7 @@ frontend/node_modules/.cache/default-development/5.pack
 .env.production
 backend/.env
 frontend/.env
+-e 
+# Environment files
+*.env
+*.env.*
