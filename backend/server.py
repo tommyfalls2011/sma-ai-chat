@@ -13,7 +13,12 @@ from typing import List, Optional
 import uuid
 from datetime import datetime, timezone
 import anthropic
-from emergentintegrations.llm.chat import LlmChat, UserMessage
+
+try:
+    from emergentintegrations.llm.chat import LlmChat, UserMessage
+    HAS_EMERGENT = True
+except ImportError:
+    HAS_EMERGENT = False
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -188,7 +193,7 @@ async def stream_anthropic(conversation_id, model, messages, settings):
     emergent_key = settings.get("emergent_llm_key", os.environ.get("EMERGENT_LLM_KEY", ""))
     anthropic_key = settings.get("anthropic_api_key", "")
 
-    if use_emergent and emergent_key:
+    if use_emergent and emergent_key and HAS_EMERGENT:
         # Use emergentintegrations library
         try:
             msg_id = str(uuid.uuid4())
