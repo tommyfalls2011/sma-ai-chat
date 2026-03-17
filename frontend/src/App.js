@@ -499,7 +499,7 @@ function App() {
       {/* Main Chat Area */}
       <main className={`flex-1 flex flex-col h-screen ${sidebarOpen ? "ml-64" : "ml-0"} transition-all duration-200`} data-testid="chat-area">
         {/* Top Bar */}
-        <header className="flex items-center justify-between px-4 py-3 border-b border-border bg-surface/80 backdrop-blur flex-shrink-0 relative z-30" data-testid="chat-header">
+        <header className="flex items-center justify-between px-4 py-3 border-b border-border bg-surface flex-shrink-0 relative z-30" data-testid="chat-header">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -521,7 +521,7 @@ function App() {
         </header>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-6 grid-bg" data-testid="messages-container">
+        <div className="flex-1 overflow-y-auto p-6 grid-bg relative z-0" data-testid="messages-container">
           {messages.length === 0 && !streamContent && (
             <div className="flex items-center justify-center h-full" data-testid="empty-state">
               <div className="text-center max-w-md">
