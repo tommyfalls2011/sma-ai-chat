@@ -543,7 +543,7 @@ function App() {
         </header>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-6 grid-bg relative z-0" data-testid="messages-container">
+        <div className="flex-1 overflow-y-auto p-6 relative z-0" data-testid="messages-container">
           {messages.length === 0 && !streamContent && (
             <div className="flex items-center justify-center h-full" data-testid="empty-state">
               <div className="text-center max-w-md">
